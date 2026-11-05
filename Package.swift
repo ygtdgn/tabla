@@ -8,7 +8,9 @@ let package = Package(
         .executableTarget(name: "Util", dependencies: ["UtilCore", "ClipboardFeature"]),
         .target(name: "UtilCore"),
         .target(name: "ClipboardFeature", dependencies: ["UtilCore"]),
+        .target(name: "SwitcherFeature", dependencies: ["UtilCore"]),
         .testTarget(name: "UtilCoreTests", dependencies: ["UtilCore"]),
         .testTarget(name: "ClipboardFeatureTests", dependencies: ["ClipboardFeature"]),
+        .testTarget(name: "SwitcherFeatureTests", dependencies: ["SwitcherFeature"]),
     ]
 )
