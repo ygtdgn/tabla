@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UtilCore
 
 /// Uygulamayı öne getirmeden klavye odağı alan, fare yanında açılan clipboard paneli.
 /// Odak kaybedince kapanır; açıkken tuşlar önce `clipboardKeyAction`'dan geçer.
@@ -28,21 +29,8 @@ final class ClipboardPanel: NSPanel, NSWindowDelegate {
         hasShadow = true
         delegate = self
 
-        let effect = NSVisualEffectView(frame: NSRect(origin: .zero, size: Self.size))
-        effect.material = .menu
-        effect.blendingMode = .behindWindow
-        // Uygulama hiç aktif olmadığı için material'ın "pasif" görünüme düşmemesi gerekir.
-        effect.state = .active
-        effect.maskImage = Self.roundedMask(radius: Self.cornerRadius)
-        effect.autoresizingMask = [.width, .height]
-
-        let hosting = NSHostingView(rootView: rootView)
-        // Panel boyutu sabit; SwiftUI içeriği pencereyi yeniden boyutlandırmasın.
-        hosting.sizingOptions = []
-        hosting.frame = effect.bounds
-        hosting.autoresizingMask = [.width, .height]
-        effect.addSubview(hosting)
-        contentView = effect
+        contentView = PanelMaterial.roundedView(size: Self.size, cornerRadius: Self.cornerRadius,
+                                                hosting: NSHostingView(rootView: rootView))
     }
 
     override var canBecomeKey: Bool { true }
@@ -80,18 +68,5 @@ final class ClipboardPanel: NSPanel, NSWindowDelegate {
     private func removeKeyMonitor() {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         keyMonitor = nil
-    }
-
-    /// Material'ı yuvarlak köşeli kırpan, kenarları sabit kalıp ortası esneyen maske.
-    private static func roundedMask(radius: CGFloat) -> NSImage {
-        let edge = radius * 2 + 1
-        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-            return true
-        }
-        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
-        image.resizingMode = .stretch
-        return image
     }
 }

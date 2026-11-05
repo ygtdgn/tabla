@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UtilCore
 
 /// Borderless, blurred panel above every app, including full-screen ones, on all Spaces.
 /// It takes mouse clicks but never becomes key and never activates Util, so the frontmost app
@@ -24,21 +25,9 @@ final class SwitcherPanel: NSPanel {
         // Shown and hidden within a fraction of a second; a fade would linger over the focused window.
         animationBehavior = .none
 
-        let effect = NSVisualEffectView(frame: initialRect)
-        effect.material = .menu
-        effect.blendingMode = .behindWindow
-        // Util is never active, so the material must not fall back to its inactive look.
-        effect.state = .active
-        effect.maskImage = Self.roundedMask(radius: Self.cornerRadius)
-        effect.autoresizingMask = [.width, .height]
-
-        let hosting = FirstMouseHostingView(rootView: rootView)
-        // The panel frame comes from SwitcherLayout; SwiftUI content must not resize the window.
-        hosting.sizingOptions = []
-        hosting.frame = effect.bounds
-        hosting.autoresizingMask = [.width, .height]
-        effect.addSubview(hosting)
-        contentView = effect
+        // The panel frame comes from SwitcherLayout at each present.
+        contentView = PanelMaterial.roundedView(size: initialRect.size, cornerRadius: Self.cornerRadius,
+                                                hosting: FirstMouseHostingView(rootView: rootView))
     }
 
     override var canBecomeKey: Bool { false }
@@ -53,19 +42,6 @@ final class SwitcherPanel: NSPanel {
 
     func dismiss() {
         orderOut(nil)
-    }
-
-    /// Mask that clips the material to rounded corners; edges stay fixed and the middle stretches.
-    private static func roundedMask(radius: CGFloat) -> NSImage {
-        let edge = radius * 2 + 1
-        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-            return true
-        }
-        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
-        image.resizingMode = .stretch
-        return image
     }
 }
 
