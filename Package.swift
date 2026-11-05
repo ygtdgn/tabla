@@ -7,6 +7,8 @@ let package = Package(
     targets: [
         .executableTarget(name: "Util", dependencies: ["UtilCore"]),
         .target(name: "UtilCore"),
+        .target(name: "ClipboardFeature", dependencies: ["UtilCore"]),
         .testTarget(name: "UtilCoreTests", dependencies: ["UtilCore"]),
+        .testTarget(name: "ClipboardFeatureTests", dependencies: ["ClipboardFeature"]),
     ]
 )
