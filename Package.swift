@@ -5,7 +5,7 @@ let package = Package(
     name: "Util",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "Util", dependencies: ["UtilCore", "ClipboardFeature"]),
+        .executableTarget(name: "Util", dependencies: ["UtilCore", "ClipboardFeature", "SwitcherFeature"]),
         .target(name: "UtilCore"),
         .target(name: "ClipboardFeature", dependencies: ["UtilCore"]),
         .target(name: "SwitcherFeature", dependencies: ["UtilCore"]),

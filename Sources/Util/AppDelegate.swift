@@ -1,5 +1,6 @@
 import AppKit
 import ClipboardFeature
+import SwitcherFeature
 import UtilCore
 
 @MainActor
@@ -11,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .appendingPathComponent("Util"),
             keyProvider: KeychainKeyProvider(service: "com.yumoteknoloji.util", account: "clipboard-key")
         ),
+        SwitcherFeature(),
     ]
 
     private var statusMenu: StatusMenuController?
