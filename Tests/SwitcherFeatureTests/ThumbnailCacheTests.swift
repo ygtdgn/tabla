@@ -19,3 +19,45 @@ func pixel() -> CGImage {
         #expect(c.image(for: 1) == nil); #expect(c.image(for: 3) != nil)
     }
 }
+
+@MainActor @Suite struct ThumbnailProviderCancellationTests {
+    /// Kaynak, test serbest bırakana kadar bekler; sonra bir görüntü yayar ve biter.
+    private func gatedSource() -> (ThumbnailProvider.CaptureSource, release: AsyncStream<Void>.Continuation, done: AsyncStream<Void>) {
+        let (gate, release) = AsyncStream<Void>.makeStream()
+        let (done, doneCont) = AsyncStream<Void>.makeStream()
+        let source: ThumbnailProvider.CaptureSource = { ids, emit in
+            for await _ in gate { break }
+            for id in ids { await emit(id, pixel()) }
+            doneCont.yield()
+        }
+        return (source, release, done)
+    }
+
+    @Test func cancelledRefreshDeliversNothing() async {
+        let cache = ThumbnailCache()
+        let (source, release, done) = gatedSource()
+        let provider = ThumbnailProvider(cache: cache, source: source)
+        var delivered: [CGWindowID] = []
+        provider.refresh([1]) { id, _ in delivered.append(id) }
+        provider.cancel()
+        release.yield()
+        for await _ in done { break }
+        #expect(delivered.isEmpty)
+        #expect(provider.cached(for: 1) == nil)
+    }
+
+    @Test func supersededRefreshDeliversOnlyLatest() async {
+        let cache = ThumbnailCache()
+        let (source, release, done) = gatedSource()
+        let provider = ThumbnailProvider(cache: cache, source: source)
+        var delivered: [CGWindowID] = []
+        provider.refresh([1]) { id, _ in delivered.append(id) }
+        provider.refresh([2]) { id, _ in delivered.append(id) }
+        release.yield(); release.yield()
+        for await _ in done { break }
+        for await _ in done { break }
+        #expect(delivered == [2])
+        #expect(provider.cached(for: 1) == nil)
+        #expect(provider.cached(for: 2) != nil)
+    }
+}
