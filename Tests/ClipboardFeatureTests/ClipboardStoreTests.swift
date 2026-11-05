@@ -42,4 +42,22 @@ import UtilCore
         try store.removeOrphans(keeping: [a])
         #expect(try files.allNames() == ["blob-\(a.uuidString)"])
     }
+    @Test func futureVersionIndexThrowsAndIsNotOverwritten() throws {
+        let (store, files, _) = try make()
+        let future = Data(#"{"version": 2, "items": []}"#.utf8)
+        try files.write(future, named: "index")
+        #expect(throws: ClipboardStoreError.unsupportedVersion(2)) { try store.loadHistory() }
+        #expect(try files.read(named: "index") == future)
+    }
+    @Test func corruptIndexThrows() throws {
+        let (store, files, _) = try make()
+        try files.write(Data("not json".utf8), named: "index")
+        #expect(throws: DecodingError.self) { try store.loadHistory() }
+    }
+    @Test func corruptBlobThrows() throws {
+        let (store, files, _) = try make()
+        let id = UUID()
+        try files.write(Data("garbage".utf8), named: "blob-\(id.uuidString)")
+        #expect(throws: DecodingError.self) { try store.loadRepresentations(for: id) }
+    }
 }

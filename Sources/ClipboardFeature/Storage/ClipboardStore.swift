@@ -1,6 +1,10 @@
 import Foundation
 import UtilCore
 
+public enum ClipboardStoreError: Error, Equatable {
+    case unsupportedVersion(Int)
+}
+
 public final class ClipboardStore {
     private struct Index: Codable {
         var version: Int
@@ -18,7 +22,11 @@ public final class ClipboardStore {
 
     public func loadHistory() throws -> ClipboardHistory {
         guard let data = try files.read(named: Self.indexName) else { return ClipboardHistory() }
-        return ClipboardHistory(items: try JSONDecoder().decode(Index.self, from: data).items)
+        let index = try JSONDecoder().decode(Index.self, from: data)
+        guard index.version <= Self.currentVersion else {
+            throw ClipboardStoreError.unsupportedVersion(index.version)
+        }
+        return ClipboardHistory(items: index.items)
     }
 
     public func saveHistory(_ history: ClipboardHistory) throws {
