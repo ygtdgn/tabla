@@ -1,10 +1,17 @@
 import AppKit
+import ClipboardFeature
 import UtilCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Feature eklemek = bu diziye bir satır.
-    private let features: [any Feature] = []
+    private let features: [any Feature] = [
+        ClipboardFeature(
+            storeDirectory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Util"),
+            keyProvider: KeychainKeyProvider(service: "com.yumoteknoloji.util", account: "clipboard-key")
+        ),
+    ]
 
     private var statusMenu: StatusMenuController?
     private var permissionsWindow: PermissionsWindowController?
