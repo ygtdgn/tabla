@@ -22,6 +22,9 @@ public final class WindowEnumerator {
     public static let axTimeout: Float = 0.05
     /// AX element ids tried when looking a window up by remote token.
     static let remoteTokenElementIDs: Range<UInt64> = 0..<1000
+    /// Wall-clock cap on one remote-token search. It runs on the main thread, next to the event tap,
+    /// and a stalling app would otherwise cost axTimeout per id.
+    static let remoteTokenSearchBudget: Duration = .milliseconds(200)
 
     private let ownPID = ProcessInfo.processInfo.processIdentifier
 
@@ -41,7 +44,10 @@ public final class WindowEnumerator {
             }
         }
 
-        let windows = Self.merge(candidates, ax: attributes)
+        let unmatchedIDs = candidates.map(\.id).filter { attributes[$0] == nil }
+        let spaces = Self.spaceData(for: unmatchedIDs)
+        let windows = Self.merge(candidates, ax: attributes, windowSpaces: spaces.windowSpaces,
+                                 currentSpaces: spaces.currentSpaces)
         var keptElements: [CGWindowID: AXUIElement] = [:]
         for window in windows {
             if let element = elements[window.id] { keptElements[window.id] = element }
@@ -49,21 +55,45 @@ public final class WindowEnumerator {
         return WindowSnapshot(windows: windows, axElements: keptElements)
     }
 
-    /// Keeps a CG window if AX sees it as a standard window or dialog, or if AX does not see it
-    /// but it has a CG title (likely on another Space). Title: AX, then CG, then app name.
-    nonisolated static func merge(_ candidates: [WindowInfo], ax: [CGWindowID: AXWindowAttributes]) -> [WindowInfo] {
+    /// Keeps a CG window if AX sees it as a standard window or dialog, or if AX does not see it but
+    /// `keepsWindowWithoutAX` does. Title: AX, then CG, then app name.
+    /// `windowSpaces` lacks an id when its lookup failed; `currentSpaces` is nil without space data.
+    nonisolated static func merge(_ candidates: [WindowInfo], ax: [CGWindowID: AXWindowAttributes],
+                                  windowSpaces: [CGWindowID: [UInt64]], currentSpaces: Set<UInt64>?) -> [WindowInfo] {
         candidates.compactMap { candidate in
+            var window = candidate
             guard let attributes = ax[candidate.id] else {
-                return candidate.title.isEmpty ? nil : candidate
+                guard keepsWindowWithoutAX(cgTitle: candidate.title, spaces: windowSpaces[candidate.id],
+                                           currentSpaces: currentSpaces)
+                else { return nil }
+                if window.title.isEmpty { window.title = candidate.appName }
+                return window
             }
             guard attributes.subrole == kAXStandardWindowSubrole || attributes.subrole == kAXDialogSubrole else {
                 return nil
             }
-            var window = candidate
             window.title = [attributes.title ?? "", candidate.title].first { !$0.isEmpty } ?? candidate.appName
             window.isMinimized = attributes.isMinimized
             return window
         }
+    }
+
+    /// A window AX does not report is kept only if it is on a Space that is not shown right now.
+    /// Ordered-out windows (hidden but alive) have no space, so they are dropped. Without space data
+    /// (`nil`), it falls back to keeping windows with a CG title.
+    nonisolated static func keepsWindowWithoutAX(cgTitle: String, spaces: [UInt64]?, currentSpaces: Set<UInt64>?) -> Bool {
+        guard let spaces, let currentSpaces else { return !cgTitle.isEmpty }
+        return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
+    }
+
+    /// Probes `ids` in order and returns the first match, giving up once `deadline` has passed.
+    nonisolated static func firstMatch<T>(in ids: Range<UInt64>, before deadline: ContinuousClock.Instant,
+                                          _ probe: (UInt64) -> T?) -> T? {
+        for id in ids {
+            guard ContinuousClock.now < deadline else { return nil }
+            if let match = probe(id) { return match }
+        }
+        return nil
     }
 
     /// Finds a window's AX element by trying remote tokens; works for windows on other Spaces.
@@ -73,15 +103,15 @@ public final class WindowEnumerator {
         }
         // Each probe below can cost up to axTimeout, so skip apps that do not answer AX at all.
         guard stringAttribute(kAXRoleAttribute, of: applicationElement(pid: pid)) != nil else { return nil }
-        for elementID in remoteTokenElementIDs {
+        return firstMatch(in: remoteTokenElementIDs, before: .now + remoteTokenSearchBudget) { elementID in
             guard let element = PrivateAPIs.element(remoteToken: PrivateAPIs.remoteToken(pid: pid, elementID: elementID))
-            else { continue }
+            else { return nil }
             AXUIElementSetMessagingTimeout(element, axTimeout)
-            if PrivateAPIs.windowID(of: element) == windowID, stringAttribute(kAXRoleAttribute, of: element) == kAXWindowRole {
-                return element
-            }
+            guard PrivateAPIs.windowID(of: element) == windowID,
+                  stringAttribute(kAXRoleAttribute, of: element) == kAXWindowRole
+            else { return nil }
+            return element
         }
-        return nil
     }
 
     public static func focusedWindowID(pid: pid_t) -> CGWindowID? {
@@ -98,6 +128,20 @@ public final class WindowEnumerator {
         let element = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(element, axTimeout)
         return element
+    }
+
+    /// SkyLight spaces of the given windows plus the currently shown spaces, read once per snapshot.
+    /// Empty and nil when SkyLight is unavailable; a window whose lookup fails is left out.
+    private static func spaceData(for windowIDs: [CGWindowID])
+        -> (windowSpaces: [CGWindowID: [UInt64]], currentSpaces: Set<UInt64>?) {
+        guard !windowIDs.isEmpty, let mainConnectionID = PrivateAPIs.slsMainConnectionID else { return ([:], nil) }
+        let connection = mainConnectionID()
+        guard let currentSpaces = PrivateAPIs.currentSpaceIDs(connection: connection) else { return ([:], nil) }
+        var windowSpaces: [CGWindowID: [UInt64]] = [:]
+        for id in windowIDs {
+            windowSpaces[id] = PrivateAPIs.spaceIDs(ofWindow: id, connection: connection)
+        }
+        return (windowSpaces, currentSpaces)
     }
 
     /// Regular apps, hidden (Cmd+H) ones included.
