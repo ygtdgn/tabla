@@ -5,6 +5,7 @@ final class StatusMenuController: NSObject {
     private let statusItem: NSStatusItem
     private let featureItems: () -> [NSMenuItem]
     private let showPermissions: () -> Void
+    private let menu = NSMenu()
 
     init(featureItems: @escaping () -> [NSMenuItem], showPermissions: @escaping () -> Void) {
         self.featureItems = featureItems
@@ -15,11 +16,13 @@ final class StatusMenuController: NSObject {
             systemSymbolName: "rectangle.on.rectangle",
             accessibilityDescription: "Util"
         )
+        statusItem.menu = menu
         rebuild()
     }
 
     func rebuild() {
-        let menu = NSMenu()
+        // Tek menü yeniden kullanılır; feature'lar aynı öğeleri tekrar verse bile üst öğe çakışmaz.
+        menu.removeAllItems()
         for item in featureItems() { menu.addItem(item) }
         menu.addItem(.separator())
 
@@ -34,7 +37,6 @@ final class StatusMenuController: NSObject {
 
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Util'den çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        statusItem.menu = menu
     }
 
     @objc private func toggleLogin() {

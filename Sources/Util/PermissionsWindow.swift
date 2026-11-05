@@ -14,12 +14,29 @@ final class PermissionsWindowController {
         )
         window.title = "Util İzinleri"
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: PermissionsView())
         window.center()
         return window
     }()
 
+    private var closeObserver: NSObjectProtocol?
+
+    init() {
+        closeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let closing = note.object as? NSWindow
+            MainActor.assumeIsolated {
+                guard let self, let closing, closing === self.window else { return }
+                // Görünümü söker; 1 sn'lik yenileme zamanlayıcısı pencere kapanınca durur.
+                self.window.contentView = nil
+            }
+        }
+    }
+
     func show() {
+        if window.contentView == nil {
+            window.contentView = NSHostingView(rootView: PermissionsView())
+        }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
     }
