@@ -2,6 +2,7 @@ import Foundation
 import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
+import UtilCore
 @testable import ClipboardFeature
 
 func date(_ i: Int) -> Date { Date(timeIntervalSince1970: Double(i)) }
@@ -40,3 +41,5 @@ func makePNG(width: Int, height: Int) -> Data {
     CGImageDestinationFinalize(dest)
     return out as Data
 }
+
+@MainActor final class FakeKeyStroker: KeyStroking { var count = 0; func postCommandV() { count += 1 } }
