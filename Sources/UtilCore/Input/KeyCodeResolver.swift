@@ -21,16 +21,18 @@ public enum KeyCodeResolver {
         let layoutData = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue()
         guard let ptr = CFDataGetBytePtr(layoutData) else { return nil }
         let keyboardType = UInt32(LMGetKbdType())
-        return ptr.withMemoryRebound(to: UCKeyboardLayout.self, capacity: 1) { layout in
-            keyCode(for: character) { code in
+        return withExtendedLifetime((source, layoutData)) {
+            ptr.withMemoryRebound(to: UCKeyboardLayout.self, capacity: 1) { layout in
+                keyCode(for: character) { code in
                 var deadKeys: UInt32 = 0
                 var length = 0
                 var chars = [UniChar](repeating: 0, count: 4)
                 let status = UCKeyTranslate(layout, code, UInt16(kUCKeyActionDown), 0, keyboardType,
-                                            OptionBits(kUCKeyTranslateNoDeadKeysBit), &deadKeys,
+                                            OptionBits(kUCKeyTranslateNoDeadKeysMask), &deadKeys,
                                             chars.count, &length, &chars)
                 guard status == noErr, length > 0 else { return nil }
                 return String(utf16CodeUnits: chars, count: length)
+                }
             }
         }
     }
