@@ -7,7 +7,7 @@ import UtilCore
 final class PermissionsWindowController {
     private lazy var window: NSWindow = {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 360),
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 470),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -60,6 +60,15 @@ private struct PermissionsView: View {
                 granted: status.screenRecording,
                 kind: .screenRecording
             )
+            // macOS 15.4 öncesinde pano erişimi sorulmaz; satır gizlenir ve izin verilmiş sayılır.
+            if Permissions.asksForPasteboardAccess {
+                row(
+                    title: "Pano Erişimi",
+                    detail: "Kopyaladığın metin ve görselleri geçmişe kaydetmek için gerekli. macOS sorduğunda \"Her Zaman İzin Ver\"i seç.",
+                    granted: status.pasteboard,
+                    kind: .pasteboard
+                )
+            }
             Text("Ekran Kaydı iznini verdikten sonra macOS uygulamanın yeniden başlatılmasını isteyebilir.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
