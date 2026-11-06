@@ -12,10 +12,7 @@ final class StatusMenuController: NSObject {
         self.showPermissions = showPermissions
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
-        statusItem.button?.image = NSImage(
-            systemSymbolName: "rectangle.on.rectangle",
-            accessibilityDescription: "Util"
-        )
+        statusItem.button?.image = StatusIcon.make()
         statusItem.menu = menu
         rebuild()
     }
@@ -36,7 +33,7 @@ final class StatusMenuController: NSObject {
         menu.addItem(permissions)
 
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Util'den çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Tabla'dan çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
     @objc private func toggleLogin() {

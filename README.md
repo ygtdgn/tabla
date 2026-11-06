@@ -1,4 +1,4 @@
-# Util
+# Tabla
 
 Menü çubuğunda çalışan küçük bir macOS uygulaması. İki işi var:
 
@@ -6,6 +6,8 @@ Menü çubuğunda çalışan küçük bir macOS uygulaması. İki işi var:
 - **Pano geçmişi (Clipboard):** `Cmd+Shift+V` ile kopyaladığın şeylerin aranabilir, şifreli geçmişi. Normal `Cmd+C` / `Cmd+V` aynen çalışır.
 
 Ağ bağlantısı, analytics veya otomatik güncelleme yok. Minimum macOS 14.
+
+Kodda ve iç kimliklerde eski adı **Util** geçer (SwiftPM hedefleri, bundle id `com.yumoteknoloji.util`, veri klasörü). Bunlar bilerek değiştirilmedi: bundle id değişirse macOS verilen izinleri unutur ve pano geçmişi eski klasörde kalır.
 
 ## Gereksinimler
 
@@ -24,20 +26,21 @@ Ağ bağlantısı, analytics veya otomatik güncelleme yok. Minimum macOS 14.
 
 ```sh
 make test   # tüm testler (swift test)
-make run    # derle, imzala, /Applications/Util.app'e kopyala ve aç
+make run    # derle, imzala, /Applications/Tabla.app'e kopyala ve aç
+make icon   # Resources/AppIcon.svg değişince AppIcon.icns'i yeniden üret
 ```
 
-`make app` yalnızca `build/Util.app` üretir (kurmaz). İlk imzalamada Keychain, `codesign`'ın anahtarı kullanması için şifreni sorabilir; **"Her Zaman İzin Ver"** seçersen bir daha sormaz.
+`make app` yalnızca `build/Tabla.app` üretir (kurmaz). İlk imzalamada Keychain, `codesign`'ın anahtarı kullanması için şifreni sorabilir; **"Her Zaman İzin Ver"** seçersen bir daha sormaz.
 
 ## İzinler
 
-Uygulama ilk açılışta "Util İzinleri" penceresini gösterir:
+Uygulama ilk açılışta "Tabla İzinleri" penceresini gösterir:
 
-- **Erişilebilirlik:** `Option+Tab` kısayolunu yakalamak, pencereleri öne getirmek ve seçilen öğeyi yapıştırmak (Util'in gönderdiği `Cmd+V`) için. `Cmd+Shift+V` sistem kısayolu olarak kayıtlıdır ve bu izin olmadan da paneli açar; izin yoksa seçilen öğe yalnızca panoya kopyalanır.
+- **Erişilebilirlik:** `Option+Tab` kısayolunu yakalamak, pencereleri öne getirmek ve seçilen öğeyi yapıştırmak (Tabla'nın gönderdiği `Cmd+V`) için. `Cmd+Shift+V` sistem kısayolu olarak kayıtlıdır ve bu izin olmadan da paneli açar; izin yoksa seçilen öğe yalnızca panoya kopyalanır.
 - **Ekran Kaydı:** Alt-Tab panelinde pencere önizlemelerini göstermek için. Görüntü kaydedilmez, panel kapalıyken ekran görüntüsü alınmaz.
 - **Pano Erişimi** (macOS 15.4 ve sonrası): kopyaladığın metin ve görselleri geçmişe kaydetmek için. macOS, programla pano okumayı varsayılan olarak her seferinde sorar; sorduğunda **"Her Zaman İzin Ver"** seç. Sonradan Sistem Ayarları → Gizlilik ve Güvenlik → **Diğer Uygulamalardan Yapıştır** bölümünden değiştirebilirsin ("Sistem Ayarları'nı aç" düğmesi oraya gider). İzin "Her Zaman İzin Ver" olmadıkça pencerede "Verilmedi" görünür. Daha eski macOS'ta bu satır görünmez.
 
-Ekran Kaydı verildikten sonra macOS uygulamayı yeniden başlatmanı isteyebilir (pencerede "Util'i yeniden başlat" düğmesi var). Bu izinler hiçbir zaman dışarı veri göndermek için kullanılmaz.
+Ekran Kaydı verildikten sonra macOS uygulamayı yeniden başlatmanı isteyebilir (pencerede "Tabla'yı yeniden başlat" düğmesi var). Bu izinler hiçbir zaman dışarı veri göndermek için kullanılmaz.
 
 ## Veri nerede, nasıl şifreli
 
@@ -72,5 +75,6 @@ Menü öğeleri ve izin değişimlerini `AppDelegate` otomatik dağıtır; ek ba
 
 - `Sources/UtilCore`: ortak parçalar (Feature, izinler, kısayollar, şifreleme, depolama)
 - `Sources/ClipboardFeature`, `Sources/SwitcherFeature`: iki özellik
-- `Sources/Util`: uygulama kabuğu (AppDelegate, menü, izin penceresi)
-- `scripts/build-app.sh`: `.app` paketini oluşturur ve imzalar
+- `Sources/Util`: uygulama kabuğu (AppDelegate, menü, menü çubuğu simgesi, izin penceresi)
+- `Resources/AppIcon.svg`: uygulama simgesinin kaynağı; `AppIcon.icns` bundan `make icon` ile üretilir
+- `scripts/build-app.sh`: `Tabla.app` paketini oluşturur ve imzalar

@@ -5,9 +5,13 @@
     <key>CFBundleIdentifier</key>
     <string>com.yumoteknoloji.util</string>
     <key>CFBundleName</key>
-    <string>Util</string>
+    <string>Tabla</string>
+    <key>CFBundleDisplayName</key>
+    <string>Tabla</string>
     <key>CFBundleExecutable</key>
-    <string>Util</string>
+    <string>Tabla</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

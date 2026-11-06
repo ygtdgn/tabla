@@ -4,7 +4,9 @@ import os
 
 enum LoginItem {
     private static let logger = Logger(subsystem: "com.yumoteknoloji.util", category: "LoginItem")
-    private static let setupKey = "didSetupLoginItem"
+    // Bumped when the app was renamed Util → Tabla: the login item was registered for /Applications/Util.app,
+    // so Tabla.app registers itself once more. The old key ("didSetupLoginItem") is no longer read.
+    private static let setupKey = "didSetupLoginItem.tabla"
 
     static var isEnabled: Bool {
         SMAppService.mainApp.status == .enabled

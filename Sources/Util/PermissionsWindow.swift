@@ -12,7 +12,7 @@ final class PermissionsWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "Util İzinleri"
+        window.title = "Tabla İzinleri"
         window.isReleasedWhenClosed = false
         return window
     }()
@@ -84,7 +84,7 @@ private struct PermissionsView: View {
                 .foregroundStyle(.secondary)
             HStack {
                 Spacer()
-                Button("Util'i yeniden başlat", action: relaunch)
+                Button("Tabla'yı yeniden başlat", action: relaunch)
             }
         }
         .padding(20)

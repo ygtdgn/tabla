@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5B9BFF"/><stop offset="1" stop-color="#2F5BEA"/></linearGradient>
+    <linearGradient id="gTray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#DCE6FF"/></linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#gBlue)"/>
+  <g>
+    <rect x="392" y="236" width="380" height="270" rx="34" fill="#fff" opacity=".35"/>
+    <rect x="346" y="290" width="380" height="270" rx="34" fill="#fff" opacity=".6"/>
+    <rect x="300" y="344" width="380" height="270" rx="34" fill="#fff"/>
+    <circle cx="344" cy="386" r="12" fill="#FF5F57"/><circle cx="380" cy="386" r="12" fill="#FEBC2E"/><circle cx="416" cy="386" r="12" fill="#28C840"/>
+    <rect x="340" y="436" width="240" height="22" rx="11" fill="#C9D6F5"/>
+    <rect x="340" y="480" width="170" height="22" rx="11" fill="#C9D6F5"/>
+    <path d="M214 640 H810 a22 22 0 0 1 21 28 l-30 94 a34 34 0 0 1 -32 24 H255 a34 34 0 0 1 -32 -24 l-30 -94 a22 22 0 0 1 21 -28 Z" fill="url(#gTray)"/>
+    <rect x="190" y="626" width="644" height="30" rx="15" fill="#fff"/>
+  </g>
+</svg>
