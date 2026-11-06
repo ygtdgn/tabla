@@ -83,6 +83,13 @@ import CoreGraphics
         let img = ClipItem(clip: imageClip([1, 2]), id: UUID(), now: date(0))
         #expect(img.kind == .image); #expect(img.preview == ""); #expect(img.imagePixelSize == CGSize(width: 40, height: 30))
     }
+    @Test func previewScansOnlyABoundedPrefix() {
+        // Büyük kopyalarda önizleme tüm metni bölmez; yalnızca ilk `previewScanLimit` karaktere bakar.
+        let late = String(repeating: "\n", count: ClipItem.previewScanLimit) + "geç satır"
+        #expect(ClipItem(clip: textClip(late), id: UUID(), now: date(0)).preview == "")
+        let early = String(repeating: "\n", count: ClipItem.previewScanLimit - 20) + "  erken satır"
+        #expect(ClipItem(clip: textClip(early), id: UUID(), now: date(0)).preview == "erken satır")
+    }
     @Test func itemRoundTripsThroughJSON() throws {
         let item = ClipItem(clip: imageClip([1, 2]), id: UUID(), now: date(5))
         let back = try JSONDecoder().decode(ClipItem.self, from: JSONEncoder().encode(item))

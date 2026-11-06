@@ -32,7 +32,16 @@ import CoreGraphics
     @Test func rejectsEmptyWhitespaceAndOversize() {
         #expect(snap([:]) == nil)
         #expect(snap([plainType: Data("  \n ".utf8)]) == nil)
+        #expect(snap([plainType: Data("\t\u{00A0}\r\n\u{2003}".utf8)]) == nil)
         #expect(snap([plainType: Data(repeating: 0x61, count: PasteboardSnapshot.maxRepresentationBytes + 1)]) == nil)
+    }
+    @Test func dedupKeyHashesTheOriginalPasteboardBytes() throws {
+        // UTF-8 BOM: çözülen metin BOM'suzdur, anahtar yine panodaki baytlardan gelir.
+        let raw = Data([0xEF, 0xBB, 0xBF]) + Data("merhaba".utf8)
+        let c = try #require(snap([plainType: raw]))
+        #expect(c.plainText == "merhaba")
+        #expect(c.dedupKey == "t:" + Hashing.sha256Hex(raw))
+        #expect(snap([plainType: raw])?.dedupKey == c.dedupKey)
     }
     @Test func pngAndTiffKeepsOnlyPNG() throws {
         let png = makePNG(width: 40, height: 30)

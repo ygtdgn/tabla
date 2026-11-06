@@ -25,6 +25,8 @@ public struct CapturedClip: Equatable, Sendable {
 
 public struct ClipItem: Codable, Equatable, Identifiable, Sendable {
     public static let previewLimit = 200
+    /// Önizleme için taranan baş kısım: büyük kopyalarda tüm metin bölünüp kırpılmaz.
+    public static let previewScanLimit = 4096
     public static let searchKeyLimit = 20_000
 
     public let id: UUID
@@ -49,7 +51,7 @@ public struct ClipItem: Codable, Equatable, Identifiable, Sendable {
         self.lastCopiedAt = now
         self.pinnedAt = nil
         if clip.kind == .text, let text = clip.plainText {
-            let line = text.split(whereSeparator: \.isNewline)
+            let line = text.prefix(Self.previewScanLimit).split(whereSeparator: \.isNewline).lazy
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .first { !$0.isEmpty } ?? ""
             self.preview = String(line.prefix(Self.previewLimit))

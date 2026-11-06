@@ -32,16 +32,12 @@ public enum PasteboardSnapshot {
         }
         if reps.isEmpty { return nil }
 
-        var plainText: String?
+        // Anahtar panodaki özgün UTF-8 baytlarından: büyük metin için ikinci bir kopya üretilmez.
         if let data = reps.first(where: { $0.type == "public.utf8-plain-text" })?.data,
-           let s = String(data: data, encoding: .utf8),
-           !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            plainText = s
-        }
-
-        if let text = plainText {
+           let text = String(data: data, encoding: .utf8),
+           text.contains(where: { !$0.isWhitespace }) {
             return CapturedClip(kind: .text, representations: reps, plainText: text,
-                                dedupKey: "t:" + Hashing.sha256Hex(Data(text.utf8)),
+                                dedupKey: "t:" + Hashing.sha256Hex(data),
                                 imagePixelSize: nil, sourceBundleID: sourceBundleID)
         }
         guard let image = reps.first(where: { imageTypes.contains($0.type) }) else { return nil }
