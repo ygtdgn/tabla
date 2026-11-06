@@ -37,8 +37,13 @@ public final class WindowEnumerator {
 
         var attributes: [CGWindowID: AXWindowAttributes] = [:]
         var elements: [CGWindowID: AXUIElement] = [:]
+        var axFailedPIDs = Set<pid_t>()
         for pid in Set(candidates.map(\.pid)) {
-            for window in Self.axWindows(pid: pid) {
+            guard let axList = Self.axWindows(pid: pid) else {
+                axFailedPIDs.insert(pid)
+                continue
+            }
+            for window in axList {
                 attributes[window.id] = window.attributes
                 elements[window.id] = window.element
             }
@@ -46,8 +51,8 @@ public final class WindowEnumerator {
 
         let unmatchedIDs = candidates.map(\.id).filter { attributes[$0] == nil }
         let spaces = Self.spaceData(for: unmatchedIDs)
-        let windows = Self.merge(candidates, ax: attributes, windowSpaces: spaces.windowSpaces,
-                                 currentSpaces: spaces.currentSpaces)
+        let windows = Self.merge(candidates, ax: attributes, axFailedPIDs: axFailedPIDs,
+                                 windowSpaces: spaces.windowSpaces, currentSpaces: spaces.currentSpaces)
         var keptElements: [CGWindowID: AXUIElement] = [:]
         for window in windows {
             if let element = elements[window.id] { keptElements[window.id] = element }
@@ -57,14 +62,17 @@ public final class WindowEnumerator {
 
     /// Keeps a CG window if AX sees it as a standard window or dialog, or if AX does not see it but
     /// `keepsWindowWithoutAX` does. Title: AX, then CG, then app name.
+    /// `axFailedPIDs` are apps whose AX window list call failed, so AX could not report any window.
     /// `windowSpaces` lacks an id when its lookup failed; `currentSpaces` is nil without space data.
     nonisolated static func merge(_ candidates: [WindowInfo], ax: [CGWindowID: AXWindowAttributes],
-                                  windowSpaces: [CGWindowID: [UInt64]], currentSpaces: Set<UInt64>?) -> [WindowInfo] {
+                                  axFailedPIDs: Set<pid_t> = [], windowSpaces: [CGWindowID: [UInt64]],
+                                  currentSpaces: Set<UInt64>?) -> [WindowInfo] {
         candidates.compactMap { candidate in
             var window = candidate
             guard let attributes = ax[candidate.id] else {
                 guard keepsWindowWithoutAX(cgTitle: candidate.title, spaces: windowSpaces[candidate.id],
-                                           currentSpaces: currentSpaces)
+                                           currentSpaces: currentSpaces, axFailed: axFailedPIDs.contains(candidate.pid),
+                                           isOnScreen: candidate.isOnScreen)
                 else { return nil }
                 if window.title.isEmpty { window.title = candidate.appName }
                 return window
@@ -81,9 +89,19 @@ public final class WindowEnumerator {
     /// A window AX does not report is kept only if it is on a Space that is not shown right now.
     /// Ordered-out windows (hidden but alive) have no space, so they are dropped. Without space data
     /// (`nil`), it falls back to keeping windows with a CG title.
-    nonisolated static func keepsWindowWithoutAX(cgTitle: String, spaces: [UInt64]?, currentSpaces: Set<UInt64>?) -> Bool {
-        guard let spaces, let currentSpaces else { return !cgTitle.isEmpty }
-        return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
+    /// If the app's AX window list failed (`axFailed`), AX vouches for nothing, so windows on a current
+    /// Space are kept as well, and without space data so are on-screen (`kCGWindowIsOnscreen`) windows.
+    nonisolated static func keepsWindowWithoutAX(cgTitle: String, spaces: [UInt64]?, currentSpaces: Set<UInt64>?,
+                                                 axFailed: Bool = false, isOnScreen: Bool = false) -> Bool {
+        guard let spaces, let currentSpaces else { return !cgTitle.isEmpty || (axFailed && isOnScreen) }
+        guard !spaces.isEmpty else { return false }
+        return axFailed || currentSpaces.isDisjoint(with: spaces)
+    }
+
+    /// Whether a `kAXWindowsAttribute` call failed. `.noValue` means the app has no windows, like an
+    /// empty list, so it is not a failure.
+    nonisolated static func isAXWindowsFailure(_ error: AXError) -> Bool {
+        error != .success && error != .noValue
     }
 
     /// Probes `ids` in order and returns the first match, giving up once `deadline` has passed.
@@ -154,11 +172,12 @@ public final class WindowEnumerator {
         return apps
     }
 
-    private static func axWindows(pid: pid_t) -> [(id: CGWindowID, element: AXUIElement, attributes: AXWindowAttributes)] {
+    /// The app's AX windows; nil when the `kAXWindowsAttribute` call itself failed (see `isAXWindowsFailure`).
+    private static func axWindows(pid: pid_t) -> [(id: CGWindowID, element: AXUIElement, attributes: AXWindowAttributes)]? {
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(applicationElement(pid: pid), kAXWindowsAttribute as CFString, &value) == .success,
-              let list = value as? [AnyObject]
-        else { return [] }
+        let error = AXUIElementCopyAttributeValue(applicationElement(pid: pid), kAXWindowsAttribute as CFString, &value)
+        guard !isAXWindowsFailure(error) else { return nil }
+        guard let list = value as? [AnyObject] else { return [] }
         return list.compactMap { item in
             guard let window = element(from: item) else { return nil }
             AXUIElementSetMessagingTimeout(window, axTimeout)

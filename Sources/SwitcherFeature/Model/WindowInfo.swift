@@ -18,9 +18,11 @@ public struct WindowInfo: Equatable, Identifiable, Sendable {
     public var title: String
     public let bounds: CGRect
     public var isMinimized: Bool
+    /// `kCGWindowIsOnscreen` at snapshot time.
+    public let isOnScreen: Bool
 
     public init(id: CGWindowID, pid: pid_t, appName: String, bundleID: String?,
-                title: String, bounds: CGRect, isMinimized: Bool) {
+                title: String, bounds: CGRect, isMinimized: Bool, isOnScreen: Bool = false) {
         self.id = id
         self.pid = pid
         self.appName = appName
@@ -28,5 +30,6 @@ public struct WindowInfo: Equatable, Identifiable, Sendable {
         self.title = title
         self.bounds = bounds
         self.isMinimized = isMinimized
+        self.isOnScreen = isOnScreen
     }
 }

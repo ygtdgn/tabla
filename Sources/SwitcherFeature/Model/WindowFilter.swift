@@ -24,7 +24,8 @@ public enum WindowFilter {
             guard seen.insert(id).inserted else { continue }
             result.append(WindowInfo(id: id, pid: pid, appName: app.name, bundleID: app.bundleID,
                                      title: dict[kCGWindowName as String] as? String ?? "",
-                                     bounds: bounds, isMinimized: false))
+                                     bounds: bounds, isMinimized: false,
+                                     isOnScreen: dict[kCGWindowIsOnscreen as String] as? Bool ?? false))
         }
         return result
     }
