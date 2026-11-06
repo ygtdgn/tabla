@@ -32,7 +32,42 @@ import CoreGraphics
     @Test func rejectsEmptyWhitespaceAndOversize() {
         #expect(snap([:]) == nil)
         #expect(snap([plainType: Data("  \n ".utf8)]) == nil)
-        #expect(snap([plainType: Data(repeating: 0x61, count: PasteboardSnapshot.maxTotalBytes + 1)]) == nil)
+        #expect(snap([plainType: Data(repeating: 0x61, count: PasteboardSnapshot.maxRepresentationBytes + 1)]) == nil)
+    }
+    @Test func pngAndTiffKeepsOnlyPNG() throws {
+        let png = makePNG(width: 40, height: 30)
+        let c = try #require(snap(["public.png": png, "public.tiff": makeTIFF(width: 40, height: 30)]))
+        #expect(c.representations.map(\.type) == ["public.png"])
+        #expect(c.representations.first?.data == png)
+        #expect(c.dedupKey == "i:" + Hashing.sha256Hex(png))
+    }
+    @Test func tiffOnlyBecomesPNG() throws {
+        let c = try #require(snap(["public.tiff": makeTIFF(width: 40, height: 30), "public.html": Data("<img>".utf8)]))
+        #expect(c.representations.map(\.type) == ["public.html", "public.png"])
+        let png = try #require(c.representations.last?.data)
+        #expect(png.starts(with: [0x89, 0x50, 0x4E, 0x47]))
+        #expect(ImageThumbnail.pixelSize(of: png) == CGSize(width: 40, height: 30))
+        #expect(c.kind == .image); #expect(c.imagePixelSize == CGSize(width: 40, height: 30))
+        #expect(c.dedupKey == "i:" + Hashing.sha256Hex(png))
+    }
+    @Test func tiffOverTheCapIsKeptWhenItsPNGFits() throws {
+        // Ekran görüntüsü gibi: sıkıştırmasız TIFF 25 MB'ı aşar, PNG'si çok küçüktür.
+        let tiff = makeTIFF(width: 3000, height: 2400)
+        #expect(tiff.count > PasteboardSnapshot.maxRepresentationBytes)
+        let c = try #require(snap(["public.tiff": tiff]))
+        #expect(c.representations.map(\.type) == ["public.png"])
+        #expect(c.imagePixelSize == CGSize(width: 3000, height: 2400))
+    }
+    @Test func undecodableTiffIsDropped() {
+        #expect(snap(["public.tiff": Data([1, 2, 3])]) == nil)
+    }
+    @Test func oversizeRepresentationIsDroppedWhileOthersAreKept() throws {
+        let cap = PasteboardSnapshot.maxRepresentationBytes
+        let c = try #require(snap([plainType: Data("merhaba".utf8),
+                                   "public.html": Data(repeating: 0x61, count: cap + 1),
+                                   "public.rtf": Data(repeating: 0x62, count: cap)]))
+        #expect(c.representations.map(\.type) == [plainType, "public.rtf"])
+        #expect(c.plainText == "merhaba")
     }
     @Test func thumbnailFitsMaxPixel() throws {
         let t = try #require(ImageThumbnail.pngThumbnail(from: makePNG(width: 400, height: 200), maxPixel: 96))

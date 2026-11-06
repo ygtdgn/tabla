@@ -28,7 +28,12 @@ final class FakePasteboard: PasteboardReading, PasteboardWriting {
     }
 }
 
-func makePNG(width: Int, height: Int) -> Data {
+func makePNG(width: Int, height: Int) -> Data { makeImage(width: width, height: height, type: .png) }
+
+/// Sıkıştırmasız TIFF: boyutu yaklaşık genişlik × yükseklik × 4 bayttır.
+func makeTIFF(width: Int, height: Int) -> Data { makeImage(width: width, height: height, type: .tiff) }
+
+private func makeImage(width: Int, height: Int, type: UTType) -> Data {
     let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                         space: CGColorSpaceCreateDeviceRGB(),
                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
@@ -36,7 +41,7 @@ func makePNG(width: Int, height: Int) -> Data {
     ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
     let image = ctx.makeImage()!
     let out = NSMutableData()
-    let dest = CGImageDestinationCreateWithData(out, UTType.png.identifier as CFString, 1, nil)!
+    let dest = CGImageDestinationCreateWithData(out, type.identifier as CFString, 1, nil)!
     CGImageDestinationAddImage(dest, image, nil)
     CGImageDestinationFinalize(dest)
     return out as Data
