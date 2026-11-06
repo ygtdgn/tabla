@@ -5,8 +5,8 @@ import UtilCore
 /// "Tabla Hakkında": icon, name, version (from Info.plist), credits, license and copyright.
 @MainActor
 final class AboutWindowController {
-    /// Public source repository. Shown as a link once set (after the GitHub repo is published).
-    static let repositoryURL: URL? = nil
+    /// Public source repository, shown as a link.
+    static let repositoryURL: URL? = URL(string: "https://github.com/ygtdgn/tabla")
 
     private lazy var window: NSWindow = {
         let window = NSWindow(
