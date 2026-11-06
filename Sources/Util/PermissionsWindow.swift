@@ -14,7 +14,6 @@ final class PermissionsWindowController {
         )
         window.title = "Util İzinleri"
         window.isReleasedWhenClosed = false
-        window.center()
         return window
     }()
 
@@ -37,8 +36,15 @@ final class PermissionsWindowController {
         if window.contentView == nil {
             window.contentView = NSHostingView(rootView: PermissionsView())
         }
+        // Her açılışta imlecin bulunduğu ekranın ortasına konur; boyut, içerik yerleşince okunur.
+        window.layoutIfNeeded()
+        if let screen = PanelPlacement.screenContainingMouse() {
+            window.setFrameOrigin(PanelPlacement.centered(size: window.frame.size, in: screen.visibleFrame).origin)
+        }
+        // LSUIElement uygulamanın etkinleşmesi reddedilebilir; pencere yine de diğerlerinin önüne gelir.
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        window.orderFrontRegardless()
     }
 }
 
