@@ -36,7 +36,8 @@ public final class WindowEnumerator {
     /// CG window list (all Spaces, minimized, hidden apps) enriched and filtered with AX.
     public func snapshot() -> WindowSnapshot {
         let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
-        let candidates = WindowFilter.windows(from: list, apps: Self.regularApps(), ownPID: ownPID)
+        let (apps, hiddenPIDs) = Self.regularApps()
+        let candidates = WindowFilter.windows(from: list, apps: apps, ownPID: ownPID)
 
         var attributes: [CGWindowID: AXWindowAttributes] = [:]
         var elements: [CGWindowID: AXUIElement] = [:]
@@ -57,9 +58,8 @@ public final class WindowEnumerator {
             log.debug("AX pencere listesi alınamayan pid'ler: \(pids, privacy: .public)")
         }
 
-        let unmatchedIDs = candidates.map(\.id).filter { attributes[$0] == nil }
-        let spaces = Self.spaceData(for: unmatchedIDs)
-        let windows = Self.merge(candidates, ax: attributes, axFailedPIDs: axFailedPIDs,
+        let spaces = Self.spaceData(for: Self.windowIDsNeedingSpaces(candidates, ax: attributes, hiddenPIDs: hiddenPIDs))
+        let windows = Self.merge(candidates, ax: attributes, axFailedPIDs: axFailedPIDs, hiddenPIDs: hiddenPIDs,
                                  windowSpaces: spaces.windowSpaces, currentSpaces: spaces.currentSpaces)
         var keptElements: [CGWindowID: AXUIElement] = [:]
         for window in windows {
@@ -68,12 +68,14 @@ public final class WindowEnumerator {
         return WindowSnapshot(windows: windows, axElements: keptElements)
     }
 
-    /// Keeps a CG window if AX sees it as a standard window or dialog, or if AX does not see it but
-    /// `keepsWindowWithoutAX` does. Title: AX, then CG, then app name.
+    /// Keeps a CG window if AX sees it as a standard window or dialog that `keepsAXWindow` keeps, or if
+    /// AX does not see it but `keepsWindowWithoutAX` does. Title: AX, then CG, then app name.
     /// `axFailedPIDs` are apps whose AX window list call failed, so AX could not report any window.
+    /// `hiddenPIDs` are hidden (Cmd+H) apps.
     /// `windowSpaces` lacks an id when its lookup failed; `currentSpaces` is nil without space data.
     nonisolated static func merge(_ candidates: [WindowInfo], ax: [CGWindowID: AXWindowAttributes],
-                                  axFailedPIDs: Set<pid_t> = [], windowSpaces: [CGWindowID: [UInt64]],
+                                  axFailedPIDs: Set<pid_t> = [], hiddenPIDs: Set<pid_t> = [],
+                                  windowSpaces: [CGWindowID: [UInt64]],
                                   currentSpaces: Set<UInt64>?) -> [WindowInfo] {
         candidates.compactMap { candidate in
             var window = candidate
@@ -85,9 +87,11 @@ public final class WindowEnumerator {
                 if window.title.isEmpty { window.title = candidate.appName }
                 return window
             }
-            guard attributes.subrole == kAXStandardWindowSubrole || attributes.subrole == kAXDialogSubrole else {
-                return nil
-            }
+            guard isSwitchable(subrole: attributes.subrole),
+                  keepsAXWindow(isOnScreen: candidate.isOnScreen, isMinimized: attributes.isMinimized,
+                                appHidden: hiddenPIDs.contains(candidate.pid), spaces: windowSpaces[candidate.id],
+                                currentSpaces: currentSpaces)
+            else { return nil }
             window.title = [attributes.title ?? "", candidate.title].first { !$0.isEmpty } ?? candidate.appName
             window.isMinimized = attributes.isMinimized
             return window
@@ -104,6 +108,32 @@ public final class WindowEnumerator {
         guard let spaces, let currentSpaces else { return !cgTitle.isEmpty || (axFailed && isOnScreen) }
         guard !spaces.isEmpty else { return false }
         return axFailed || currentSpaces.isDisjoint(with: spaces)
+    }
+
+    /// An AX standard window or dialog is kept if the user can reach it: it is on screen
+    /// (`kCGWindowIsOnscreen`), minimized, in a hidden app, or only on Spaces not shown right now.
+    /// Otherwise it is ordered out on a current Space and invisible (an app's helper window), so it is
+    /// dropped. Without space data (`nil`), it is kept, as before.
+    nonisolated static func keepsAXWindow(isOnScreen: Bool, isMinimized: Bool, appHidden: Bool,
+                                          spaces: [UInt64]?, currentSpaces: Set<UInt64>?) -> Bool {
+        if isOnScreen || isMinimized || appHidden { return true }
+        guard let spaces, let currentSpaces else { return true }
+        return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
+    }
+
+    /// Windows whose keep decision needs SkyLight spaces: those AX does not report, and AX standard
+    /// windows or dialogs that are not on screen, not minimized and not in a hidden app.
+    nonisolated static func windowIDsNeedingSpaces(_ candidates: [WindowInfo], ax: [CGWindowID: AXWindowAttributes],
+                                                   hiddenPIDs: Set<pid_t>) -> [CGWindowID] {
+        candidates.filter { candidate in
+            guard let attributes = ax[candidate.id] else { return true }
+            return isSwitchable(subrole: attributes.subrole) && !candidate.isOnScreen && !attributes.isMinimized
+                && !hiddenPIDs.contains(candidate.pid)
+        }.map(\.id)
+    }
+
+    nonisolated private static func isSwitchable(subrole: String?) -> Bool {
+        subrole == kAXStandardWindowSubrole || subrole == kAXDialogSubrole
     }
 
     /// Whether a `kAXWindowsAttribute` call failed. `.noValue` means the app has no windows, like an
@@ -170,14 +200,16 @@ public final class WindowEnumerator {
         return (windowSpaces, currentSpaces)
     }
 
-    /// Regular apps, hidden (Cmd+H) ones included.
-    private static func regularApps() -> [pid_t: AppIdentity] {
+    /// Regular apps, hidden (Cmd+H) ones included, plus the pids of the hidden ones.
+    private static func regularApps() -> (apps: [pid_t: AppIdentity], hiddenPIDs: Set<pid_t>) {
         var apps: [pid_t: AppIdentity] = [:]
+        var hiddenPIDs = Set<pid_t>()
         for app in NSWorkspace.shared.runningApplications where app.activationPolicy == .regular {
             apps[app.processIdentifier] = AppIdentity(name: app.localizedName ?? app.bundleIdentifier ?? "",
                                                       bundleID: app.bundleIdentifier)
+            if app.isHidden { hiddenPIDs.insert(app.processIdentifier) }
         }
-        return apps
+        return (apps, hiddenPIDs)
     }
 
     /// The app's AX windows; nil when the `kAXWindowsAttribute` call itself failed (see `isAXWindowsFailure`).

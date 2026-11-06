@@ -81,6 +81,85 @@ private func window(_ id: CGWindowID, title: String, pid: pid_t = 100, onScreen:
     }
 }
 
+@Suite struct AXWindowVisibilityTests {
+    private let dialog = AXWindowAttributes(subrole: "AXDialog", title: "", isMinimized: false)
+    private let standard = AXWindowAttributes(subrole: "AXStandardWindow", title: "Belge", isMinimized: false)
+    private let minimized = AXWindowAttributes(subrole: "AXStandardWindow", title: "Belge", isMinimized: true)
+
+    @Test func onScreenDialogIsKept() {
+        let merged = WindowEnumerator.merge([window(1, title: "", onScreen: true)], ax: [1: dialog],
+                                            windowSpaces: [1: [1]], currentSpaces: [1])
+        #expect(merged.map(\.id) == [1])
+        #expect(WindowEnumerator.keepsAXWindow(isOnScreen: true, isMinimized: false, appHidden: false,
+                                               spaces: [1], currentSpaces: [1]))
+    }
+
+    @Test func orderedOutDialogOnCurrentSpaceIsDropped() {
+        // cmux: 64×64 AXDialog, başlıksız, kCGWindowIsOnscreen 0, geçerli Space 1'de.
+        let spaces: [CGWindowID: [UInt64]] = [1: [1], 2: [], 3: [1, 2], 4: [1]]
+        let merged = WindowEnumerator.merge([window(1, title: ""), window(2, title: ""), window(3, title: ""),
+                                             window(4, title: "Belge")],
+                                            ax: [1: dialog, 2: dialog, 3: dialog, 4: standard],
+                                            windowSpaces: spaces, currentSpaces: [1, 4])
+        #expect(merged.isEmpty)
+        #expect(!WindowEnumerator.keepsAXWindow(isOnScreen: false, isMinimized: false, appHidden: false,
+                                                spaces: [1], currentSpaces: [1]))
+        #expect(!WindowEnumerator.keepsAXWindow(isOnScreen: false, isMinimized: false, appHidden: false,
+                                                spaces: [], currentSpaces: [1]))
+    }
+
+    @Test func minimizedWindowIsKept() {
+        let merged = WindowEnumerator.merge([window(1, title: "")], ax: [1: minimized],
+                                            windowSpaces: [1: []], currentSpaces: [1])
+        #expect(merged.map(\.id) == [1])
+        #expect(merged[0].isMinimized)
+        #expect(WindowEnumerator.keepsAXWindow(isOnScreen: false, isMinimized: true, appHidden: false,
+                                               spaces: [], currentSpaces: [1]))
+    }
+
+    @Test func hiddenAppWindowIsKept() {
+        let merged = WindowEnumerator.merge([window(1, title: "", pid: 100), window(2, title: "", pid: 200)],
+                                            ax: [1: standard, 2: standard], hiddenPIDs: [100],
+                                            windowSpaces: [1: [], 2: []], currentSpaces: [1])
+        #expect(merged.map(\.id) == [1])
+        #expect(WindowEnumerator.keepsAXWindow(isOnScreen: false, isMinimized: false, appHidden: true,
+                                               spaces: [], currentSpaces: [1]))
+    }
+
+    @Test func windowOnAnotherSpaceIsKept() {
+        let merged = WindowEnumerator.merge([window(1, title: ""), window(2, title: "")], ax: [1: dialog, 2: standard],
+                                            windowSpaces: [1: [2], 2: [2, 3]], currentSpaces: [1, 4])
+        #expect(merged.map(\.id) == [1, 2])
+        #expect(WindowEnumerator.keepsAXWindow(isOnScreen: false, isMinimized: false, appHidden: false,
+                                               spaces: [2], currentSpaces: [1]))
+    }
+
+    @Test func withoutSpaceDataAXWindowsAreKeptAsBefore() {
+        let noSLS = WindowEnumerator.merge([window(1, title: ""), window(2, title: "")], ax: [1: dialog, 2: standard],
+                                           windowSpaces: [:], currentSpaces: nil)
+        #expect(noSLS.map(\.id) == [1, 2])
+        // Pencerenin kendi space sorgusu başarısız olduysa da düşürülmez.
+        let lookupFailed = WindowEnumerator.merge([window(1, title: "")], ax: [1: dialog],
+                                                  windowSpaces: [:], currentSpaces: [1])
+        #expect(lookupFailed.map(\.id) == [1])
+        #expect(WindowEnumerator.keepsAXWindow(isOnScreen: false, isMinimized: false, appHidden: false,
+                                               spaces: nil, currentSpaces: [1]))
+        #expect(WindowEnumerator.keepsAXWindow(isOnScreen: false, isMinimized: false, appHidden: false,
+                                               spaces: [1], currentSpaces: nil))
+    }
+
+    @Test func spacesAreQueriedOnlyForWindowsThatNeedThem() {
+        let ax: [CGWindowID: AXWindowAttributes] = [
+            1: dialog, 2: dialog, 3: minimized, 4: standard, 5: standard,
+            6: .init(subrole: "AXFloatingWindow", title: "Palet", isMinimized: false),
+        ]
+        let candidates = [window(1, title: "", onScreen: true), window(2, title: ""), window(3, title: ""),
+                          window(4, title: "", pid: 200), window(5, title: ""), window(6, title: ""),
+                          window(7, title: "AX'siz")]
+        #expect(WindowEnumerator.windowIDsNeedingSpaces(candidates, ax: ax, hiddenPIDs: [200]) == [2, 5, 7])
+    }
+}
+
 @Suite struct SpaceKeepRuleTests {
     @Test func emptySpaceListIsDropped() {
         #expect(!WindowEnumerator.keepsWindowWithoutAX(cgTitle: "Tercihler", spaces: [], currentSpaces: [1]))
