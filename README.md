@@ -35,7 +35,7 @@ Uygulama ilk açılışta "Util İzinleri" penceresini gösterir:
 
 - **Erişilebilirlik:** `Option+Tab` ve `Cmd+Shift+V` kısayollarını dinlemek, pencereleri öne getirmek ve seçilen öğeyi yapıştırmak için.
 - **Ekran Kaydı:** Alt-Tab panelinde pencere önizlemelerini göstermek için. Görüntü kaydedilmez, panel kapalıyken ekran görüntüsü alınmaz.
-- **Pano Erişimi** (macOS 15.4 ve sonrası): kopyaladığın metin ve görselleri geçmişe kaydetmek için. macOS, programla pano okumayı varsayılan olarak her seferinde sorar; sorduğunda **"Her Zaman İzin Ver"** seç. Sonradan Sistem Ayarları → Gizlilik ve Güvenlik → Pano bölümünden değiştirebilirsin ("Sistem Ayarları'nı aç" düğmesi oraya gider). İzin "Her Zaman İzin Ver" olmadıkça pencerede "Verilmedi" görünür. Daha eski macOS'ta bu satır görünmez.
+- **Pano Erişimi** (macOS 15.4 ve sonrası): kopyaladığın metin ve görselleri geçmişe kaydetmek için. macOS, programla pano okumayı varsayılan olarak her seferinde sorar; sorduğunda **"Her Zaman İzin Ver"** seç. Sonradan Sistem Ayarları → Gizlilik ve Güvenlik → **Diğer Uygulamalardan Yapıştır** bölümünden değiştirebilirsin ("Sistem Ayarları'nı aç" düğmesi oraya gider). İzin "Her Zaman İzin Ver" olmadıkça pencerede "Verilmedi" görünür. Daha eski macOS'ta bu satır görünmez.
 
 Ekran Kaydı verildikten sonra macOS uygulamayı yeniden başlatmanı isteyebilir (pencerede "Util'i yeniden başlat" düğmesi var). Bu izinler hiçbir zaman dışarı veri göndermek için kullanılmaz.
 
