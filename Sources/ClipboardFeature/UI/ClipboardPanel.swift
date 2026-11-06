@@ -55,13 +55,19 @@ final class ClipboardPanel: NSPanel, NSWindowDelegate {
     private func installKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, event.window === self,
-                  let action = clipboardKeyAction(keyCode: event.keyCode,
-                                                  modifiers: event.modifierFlags,
-                                                  characters: event.charactersIgnoringModifiers)
-            else { return event }
-            self.onKeyAction(action)
-            return nil
+            guard let self, event.window === self else { return event }
+            let characters = event.charactersIgnoringModifiers
+            if let action = clipboardKeyAction(keyCode: event.keyCode, modifiers: event.modifierFlags,
+                                               characters: characters) {
+                self.onKeyAction(action)
+                return nil
+            }
+            // Ana menü yok: arama alanındaki ⌘A/C/V/X/Z ve ⇧⌘Z responder zincirine elle gönderilir.
+            if let command = clipboardEditCommand(modifiers: event.modifierFlags, characters: characters) {
+                NSApp.sendAction(command.selector, to: nil, from: nil)
+                return nil
+            }
+            return event
         }
     }
 

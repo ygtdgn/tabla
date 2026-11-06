@@ -45,4 +45,31 @@ import Foundation
         #expect(clipboardKeyAction(keyCode: 29, modifiers: [.command], characters: "0") == nil)
         #expect(clipboardKeyAction(keyCode: 0, modifiers: [], characters: "a") == nil)
     }
+    @Test func editShortcutsMapToStandardActions() {
+        #expect(clipboardEditCommand(modifiers: [.command], characters: "a") == .selectAll)
+        #expect(clipboardEditCommand(modifiers: [.command], characters: "c") == .copy)
+        #expect(clipboardEditCommand(modifiers: [.command], characters: "v") == .paste)
+        #expect(clipboardEditCommand(modifiers: [.command], characters: "x") == .cut)
+        #expect(clipboardEditCommand(modifiers: [.command], characters: "z") == .undo)
+        #expect(clipboardEditCommand(modifiers: [.command, .shift], characters: "Z") == .redo)
+        #expect(clipboardEditCommand(modifiers: [.command, .capsLock], characters: "A") == .selectAll)
+    }
+    @Test func otherKeysAreNotEditShortcuts() {
+        #expect(clipboardEditCommand(modifiers: [], characters: "a") == nil)
+        #expect(clipboardEditCommand(modifiers: [.command, .option], characters: "c") == nil)
+        #expect(clipboardEditCommand(modifiers: [.command, .control], characters: "v") == nil)
+        #expect(clipboardEditCommand(modifiers: [.command, .shift], characters: "A") == nil)
+        #expect(clipboardEditCommand(modifiers: [.command], characters: "1") == nil)
+        #expect(clipboardEditCommand(modifiers: [.command], characters: nil) == nil)
+        // ⌘1–9 hâlâ numaralı öğeyi yapıştırır.
+        #expect(clipboardKeyAction(keyCode: 18, modifiers: [.command], characters: "1") == .pasteShortcut(1))
+    }
+    @Test func editCommandsUseResponderChainSelectors() {
+        #expect(ClipboardEditCommand.selectAll.selector == #selector(NSText.selectAll(_:)))
+        #expect(ClipboardEditCommand.copy.selector == #selector(NSText.copy(_:)))
+        #expect(ClipboardEditCommand.paste.selector == #selector(NSText.paste(_:)))
+        #expect(ClipboardEditCommand.cut.selector == #selector(NSText.cut(_:)))
+        #expect(ClipboardEditCommand.undo.selector == Selector(("undo:")))
+        #expect(ClipboardEditCommand.redo.selector == Selector(("redo:")))
+    }
 }
