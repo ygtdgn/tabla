@@ -1,23 +1,25 @@
 # Tabla
 
+> **English summary.** Tabla is a small macOS menu bar app with two features: a Windows-style **Alt-Tab** window switcher with live previews (`Option+Tab`, leaves `Cmd+Tab` alone) and an encrypted, searchable **clipboard history** for text and images (`Cmd+Shift+V`). Everything stays on your Mac: no network access, no analytics. Requires macOS 14+. There is no prebuilt download; build it yourself with Xcode (see *Gereksinimler* / *Komutlar* below: install Xcode, put the SHA-1 of your own "Apple Development" certificate into `signing.env`, run `make run`). Licensed under GPL-3.0. The rest of this README is in Turkish.
+
 Menü çubuğunda çalışan küçük bir macOS uygulaması. İki işi var:
 
 - **Alt-Tab (Switcher):** `Option+Tab` ile pencere önizlemeli geçiş paneli. `Cmd+Tab`'e dokunmaz.
 - **Pano geçmişi (Clipboard):** `Cmd+Shift+V` ile kopyaladığın şeylerin aranabilir, şifreli geçmişi. Normal `Cmd+C` / `Cmd+V` aynen çalışır.
 
-Ağ bağlantısı, analytics veya otomatik güncelleme yok. Minimum macOS 14.
+Ağ bağlantısı, analytics veya otomatik güncelleme yok. Minimum macOS 14. Hazır indirilebilir sürüm yok; aşağıdaki adımlarla kendin derlersin.
 
 Kodda ve iç kimliklerde eski adı **Util** geçer (SwiftPM hedefleri, bundle id `com.yumoteknoloji.util`, veri klasörü). Bunlar bilerek değiştirilmedi: bundle id değişirse macOS verilen izinleri unutur ve pano geçmişi eski klasörde kalır.
 
 ## Gereksinimler
 
 1. **Xcode** (komut satırı araçlarıyla birlikte).
-2. **Yumo Teknoloji "Apple Development" sertifikası.** Xcode → Settings → Accounts → hesabını seç → Manage Certificates ile ekle. Ad-hoc imza kullanılmaz; böylece izinler her derlemede sıfırlanmaz.
+2. **Bir "Apple Development" sertifikası.** Ücretsiz bir Apple ID yeter: Xcode → Settings → Accounts → Apple ID'ni ekle → Manage Certificates → `+` → Apple Development. Ad-hoc imza kullanılmaz; çünkü ad-hoc imzalı uygulamanın izinleri (Erişilebilirlik, Ekran Kaydı) her derlemede sıfırlanır.
 3. **`signing.env` dosyası.** `signing.env.example` dosyasını `signing.env` olarak kopyala ve içindeki `UTIL_SIGN_IDENTITY` değerine sertifikanın SHA-1 değerini yaz:
 
    ```sh
    cp signing.env.example signing.env
-   security find-identity -v -p codesigning   # Yumo geçen satırdaki SHA-1'i al
+   security find-identity -v -p codesigning   # "Apple Development: <adın>" satırındaki 40 haneli SHA-1'i al
    ```
 
    `signing.env` git'e girmez.
