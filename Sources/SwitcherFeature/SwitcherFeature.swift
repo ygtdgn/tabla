@@ -142,7 +142,7 @@ public final class SwitcherFeature: Feature {
         panel.present(frame: SwitcherPanelGeometry.panelFrame(size: layout.panelSize, in: visibleFrame))
 
         if capturesThumbnails {
-            thumbnails.refresh(windows.map(\.id)) { [weak self] id, image in
+            thumbnails.refresh(ThumbnailProvider.refreshTargets(windows)) { [weak self] id, image in
                 self?.viewModel.setImage(image, for: id)
             }
         }

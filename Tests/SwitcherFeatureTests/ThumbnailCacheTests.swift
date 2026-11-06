@@ -61,3 +61,15 @@ func pixel() -> CGImage {
         #expect(provider.cached(for: 2) != nil)
     }
 }
+
+@Suite struct ThumbnailRefreshTargetTests {
+    private func window(_ id: CGWindowID, minimized: Bool) -> WindowInfo {
+        WindowInfo(id: id, pid: 1, appName: "A", bundleID: nil, title: "", bounds: .zero, isMinimized: minimized)
+    }
+
+    @Test func minimizedWindowsAreNotRecaptured() {
+        let windows = [window(1, minimized: false), window(2, minimized: true), window(3, minimized: false)]
+        #expect(ThumbnailProvider.refreshTargets(windows) == [1, 3])
+        #expect(ThumbnailProvider.refreshTargets([window(4, minimized: true)]).isEmpty)
+    }
+}

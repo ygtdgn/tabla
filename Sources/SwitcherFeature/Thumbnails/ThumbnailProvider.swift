@@ -26,6 +26,12 @@ public final class ThumbnailProvider {
         self.source = source
     }
 
+    /// Küçültülmüş pencereler yeniden yakalanmaz: ScreenCaptureKit onları canlı alamaz ve iyi önizlemenin
+    /// üstüne boş bir görüntü yazar. Önbellekteki görüntüleri (yoksa uygulama ikonu) kalır.
+    nonisolated static func refreshTargets(_ windows: [WindowInfo]) -> [CGWindowID] {
+        windows.filter { !$0.isMinimized }.map(\.id)
+    }
+
     public func cached(for id: CGWindowID) -> CGImage? {
         cache.image(for: id)
     }
