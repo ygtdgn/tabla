@@ -17,13 +17,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusMenu: StatusMenuController?
     private var permissionsWindow: PermissionsWindowController?
+    private let aboutWindow = AboutWindowController()
     private var pollTimer: Timer?
     private var lastStatus = Permissions.current()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusMenu = StatusMenuController(
             featureItems: { [weak self] in self?.features.flatMap { $0.menuItems() } ?? [] },
-            showPermissions: { [weak self] in self?.showPermissionsWindow() }
+            showPermissions: { [weak self] in self?.showPermissionsWindow() },
+            showAbout: { [weak self] in self?.aboutWindow.show() }
         )
         LoginItem.enableOnFirstLaunch()
 

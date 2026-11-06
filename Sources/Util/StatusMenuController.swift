@@ -5,11 +5,17 @@ final class StatusMenuController: NSObject {
     private let statusItem: NSStatusItem
     private let featureItems: () -> [NSMenuItem]
     private let showPermissions: () -> Void
+    private let showAbout: () -> Void
     private let menu = NSMenu()
 
-    init(featureItems: @escaping () -> [NSMenuItem], showPermissions: @escaping () -> Void) {
+    init(
+        featureItems: @escaping () -> [NSMenuItem],
+        showPermissions: @escaping () -> Void,
+        showAbout: @escaping () -> Void
+    ) {
         self.featureItems = featureItems
         self.showPermissions = showPermissions
+        self.showAbout = showAbout
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
         statusItem.button?.image = StatusIcon.make()
@@ -33,6 +39,9 @@ final class StatusMenuController: NSObject {
         menu.addItem(permissions)
 
         menu.addItem(.separator())
+        let about = NSMenuItem(title: "Tabla Hakkında", action: #selector(openAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
         menu.addItem(NSMenuItem(title: "Tabla'dan çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
@@ -43,5 +52,9 @@ final class StatusMenuController: NSObject {
 
     @objc private func openPermissions() {
         showPermissions()
+    }
+
+    @objc private func openAbout() {
+        showAbout()
     }
 }

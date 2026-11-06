@@ -78,3 +78,9 @@ Menü öğeleri ve izin değişimlerini `AppDelegate` otomatik dağıtır; ek ba
 - `Sources/Util`: uygulama kabuğu (AppDelegate, menü, menü çubuğu simgesi, izin penceresi)
 - `Resources/AppIcon.svg`: uygulama simgesinin kaynağı; `AppIcon.icns` bundan `make icon` ile üretilir
 - `scripts/build-app.sh`: `Tabla.app` paketini oluşturur ve imzalar
+
+## Lisans
+
+Tabla, [GNU General Public License v3.0](LICENSE) ile lisanslı açık kaynak yazılımdır. Kodu değiştirip dağıtan herkes değiştirdiği kodu da aynı lisansla açmak zorundadır.
+
+© 2026 Yumo Teknoloji Limited Şirketi
