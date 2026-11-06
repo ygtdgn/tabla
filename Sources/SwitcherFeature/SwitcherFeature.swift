@@ -51,6 +51,8 @@ public final class SwitcherFeature: Feature {
             stopSwitching()
             return
         }
+        // Built once up front, so the first Option+Tab does not pay for the window and its SwiftUI host.
+        if panel == nil { panel = makePanel() }
         focusObserver.start()
         if !isMRUSeeded { takeSnapshot() }
         startTap()

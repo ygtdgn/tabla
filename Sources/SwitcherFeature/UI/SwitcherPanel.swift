@@ -11,8 +11,10 @@ final class SwitcherPanel: NSPanel {
 
     init(rootView: SwitcherView) {
         let initialRect = NSRect(x: 0, y: 0, width: 200, height: 100)
+        // Not deferred: the panel is created ahead of the first show, and the window must exist for the
+        // forced draw in `present` to reach the screen with its first frame.
         super.init(contentRect: initialRect, styleMask: [.nonactivatingPanel, .borderless],
-                   backing: .buffered, defer: true)
+                   backing: .buffered, defer: false)
         level = .popUpMenu
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         // Util is never the active app; the NSPanel default would keep the panel hidden.
@@ -33,8 +35,12 @@ final class SwitcherPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
+    /// Call after the cards are set: layout and drawing are forced before ordering in, so the first
+    /// composited frame shows the cards instead of the empty view.
     func present(frame: CGRect) {
-        setFrame(frame, display: true)
+        setFrame(frame, display: false)
+        contentView?.layoutSubtreeIfNeeded()
+        display()
         orderFrontRegardless()
         // The shadow follows the rounded mask only once it is recomputed for the new size.
         invalidateShadow()
