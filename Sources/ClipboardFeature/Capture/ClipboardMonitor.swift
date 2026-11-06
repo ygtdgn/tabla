@@ -1,4 +1,8 @@
 import Foundation
+import os
+import UtilCore
+
+private let log = Logger(subsystem: "com.yumoteknoloji.util", category: "clipboard")
 
 @MainActor
 public final class ClipboardMonitor {
@@ -38,8 +42,13 @@ public final class ClipboardMonitor {
         guard count != lastChangeCount else { return }
         lastChangeCount = count
         guard count != ignoredCount else { return }
+        let started = ContinuousClock.now
         if let clip = PasteboardSnapshot.capture(from: pasteboard, sourceBundleID: frontmostBundleID()) {
             onCapture(clip)
+            // Yalnızca süre ve boyut; içerik asla günlüğe yazılmaz.
+            let elapsed = (ContinuousClock.now - started).inMilliseconds
+            let bytes = clip.representations.reduce(0) { $0 + $1.data.count }
+            log.debug("Pano yakalama: \(elapsed, format: .fixed(precision: 1), privacy: .public) ms, \(bytes, privacy: .public) bayt")
         }
     }
 

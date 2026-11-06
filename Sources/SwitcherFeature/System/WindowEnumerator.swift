@@ -1,6 +1,9 @@
 import AppKit
 import ApplicationServices
 import CoreGraphics
+import os
+
+private let log = Logger(subsystem: "com.yumoteknoloji.util", category: "switcher")
 
 public struct WindowSnapshot {
     /// Switchable windows, front to back.
@@ -47,6 +50,11 @@ public final class WindowEnumerator {
                 attributes[window.id] = window.attributes
                 elements[window.id] = window.element
             }
+        }
+
+        if !axFailedPIDs.isEmpty {
+            let pids = axFailedPIDs.sorted().map(String.init).joined(separator: ", ")
+            log.debug("AX pencere listesi alınamayan pid'ler: \(pids, privacy: .public)")
         }
 
         let unmatchedIDs = candidates.map(\.id).filter { attributes[$0] == nil }

@@ -45,6 +45,21 @@ enum PrivateAPIs {
     static let slsCopyManagedDisplaySpaces: SLSCopyManagedDisplaySpacesFunction? =
         symbol("SLSCopyManagedDisplaySpaces", in: dlopen(skyLightPath, RTLD_LAZY))
 
+    /// Private symbols that did not resolve on this system; their callers fall back to public API.
+    static var unresolvedSymbolNames: [String] {
+        let symbols: [(name: String, resolved: Bool)] = [
+            ("_AXUIElementGetWindow", axUIElementGetWindow != nil),
+            ("_AXUIElementCreateWithRemoteToken", axUIElementCreateWithRemoteToken != nil),
+            ("GetProcessForPID", getProcessForPID != nil),
+            ("_SLPSSetFrontProcessWithOptions", slpsSetFrontProcessWithOptions != nil),
+            ("SLPSPostEventRecordTo", slpsPostEventRecordTo != nil),
+            ("SLSMainConnectionID", slsMainConnectionID != nil),
+            ("SLSCopySpacesForWindows", slsCopySpacesForWindows != nil),
+            ("SLSCopyManagedDisplaySpaces", slsCopyManagedDisplaySpaces != nil),
+        ]
+        return symbols.filter { !$0.resolved }.map(\.name)
+    }
+
     /// `kCPSUserGenerated` mode for `_SLPSSetFrontProcessWithOptions`.
     static let userGeneratedFrontMode: UInt32 = 0x200
     /// Space mask for `SLSCopySpacesForWindows`: all spaces (current, other, fullscreen).

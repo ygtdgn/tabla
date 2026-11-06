@@ -43,6 +43,7 @@ public final class ClipboardFeature: NSObject, Feature {
         viewModel = ClipboardViewModel(history: library.history)
         viewModel.isLocked = library.isLocked
         super.init()
+        Self.logPasteboardAccessBehavior()
         monitor.start()
         registerHotKey()
     }
@@ -233,6 +234,19 @@ public final class ClipboardFeature: NSObject, Feature {
     }
 
     // MARK: Launch
+
+    private static func logPasteboardAccessBehavior() {
+        guard #available(macOS 15.4, *) else { return }
+        let behavior = NSPasteboard.general.accessBehavior
+        let name = switch behavior {
+        case .default: "default"
+        case .ask: "ask"
+        case .alwaysAllow: "alwaysAllow"
+        case .alwaysDeny: "alwaysDeny"
+        @unknown default: "raw \(behavior.rawValue)"
+        }
+        log.debug("Pano erişim davranışı (açılış): \(name, privacy: .public)")
+    }
 
     private static func makeStore(directory: URL, keyProvider: KeyProvider) -> ClipboardStore? {
         do {

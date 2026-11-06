@@ -22,6 +22,8 @@ public final class SwitcherFeature: Feature {
     /// Bumped at every session start, so a late show timer or schedule of an older session is ignored.
     private var session = 0
     private var showTimer: Timer?
+    /// When the current session's first Tab arrived; for the debug log of the time to `.showPanel`.
+    private var sessionStartedAt: ContinuousClock.Instant?
     /// Runs while Accessibility is granted but the event tap could not be created yet.
     private var tapRetryTimer: Timer?
     private var capturesThumbnails = false
@@ -38,6 +40,8 @@ public final class SwitcherFeature: Feature {
         let cache = ThumbnailCache()
         self.cache = cache
         thumbnails = ThumbnailProvider(cache: cache)
+        let missing = PrivateAPIs.unresolvedSymbolNames
+        log.debug("Çözülemeyen özel semboller: \(missing.isEmpty ? "yok" : missing.joined(separator: ", "), privacy: .public)")
     }
 
     // MARK: Feature
@@ -97,6 +101,7 @@ public final class SwitcherFeature: Feature {
         guard let input = switcherInput(for: event, isActive: machine.isActive) else { return false }
         if case .tab = input, !machine.isActive {
             session += 1
+            sessionStartedAt = .now
             takeSnapshot()
         }
         let output = machine.handle(input, windowCount: windows.count)
@@ -133,6 +138,10 @@ public final class SwitcherFeature: Feature {
                 schedulePanel(session: session)
             case .showPanel:
                 showPanel()
+                if let sessionStartedAt {
+                    let elapsed = (ContinuousClock.now - sessionStartedAt).inMilliseconds
+                    log.debug("İlk Tab'dan panele: \(elapsed, format: .fixed(precision: 1), privacy: .public) ms")
+                }
             case .hidePanel:
                 hidePanel()
             case .focus(let window):
@@ -199,7 +208,10 @@ public final class SwitcherFeature: Feature {
     /// Refreshes the window list; closed windows drop out of the MRU and the preview cache.
     /// The first snapshot seeds the MRU in CG front-to-back order.
     private func takeSnapshot() {
+        let started = ContinuousClock.now
         let snapshot = enumerator.snapshot()
+        let elapsed = (ContinuousClock.now - started).inMilliseconds
+        log.debug("Pencere listesi: \(elapsed, format: .fixed(precision: 1), privacy: .public) ms, \(snapshot.windows.count, privacy: .public) pencere")
         if !isMRUSeeded {
             for window in snapshot.windows.reversed() { mru.touch(window.id) }
             isMRUSeeded = true
