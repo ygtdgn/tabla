@@ -67,6 +67,38 @@ public struct ClipboardHistory: Equatable, Sendable {
 
     public func item(_ id: UUID) -> ClipItem? { items.first { $0.id == id } }
 
+    public struct Absorption: Equatable {
+        /// Kimliğiyle eklenen bellek öğeleri; verileri artık diske yazılmalı.
+        public let added: [UUID]
+        /// Aynı içerikli var olan öğeye katılan bellek öğeleri; bu kimlikler artık geçmişte yok.
+        public let merged: [UUID]
+        /// Limit yüzünden silinen öğeler.
+        public let evicted: [UUID]
+        public init(added: [UUID], merged: [UUID], evicted: [UUID]) {
+            self.added = added; self.merged = merged; self.evicted = evicted
+        }
+    }
+
+    /// Kilitliyken yalnızca bellekte biriken öğeleri bu (diskten yüklenen) geçmişe katar, eskiden yeniye.
+    /// Dedup `add` ile aynıdır: aynı içerik varsa o öğe en üste çıkar ve sabitlemesi yoksa bellekteki
+    /// sabitleme ona geçer; yoksa öğe kimliği, zamanları ve sabitlemesiyle eklenir. Limit en sonda bir
+    /// kez uygulanır, böylece sabitlenmiş bellek öğeleri yüzünden fazladan öğe silinmez.
+    public mutating func absorb(_ memory: [ClipItem]) -> Absorption {
+        var added: [UUID] = []
+        var merged: [UUID] = []
+        for item in memory.sorted(by: { $0.lastCopiedAt < $1.lastCopiedAt }) {
+            if let i = items.firstIndex(where: { $0.dedupKey == item.dedupKey }) {
+                items[i].lastCopiedAt = max(items[i].lastCopiedAt, item.lastCopiedAt)
+                if items[i].pinnedAt == nil { items[i].pinnedAt = item.pinnedAt }
+                merged.append(item.id)
+            } else {
+                items.append(item)
+                added.append(item.id)
+            }
+        }
+        return Absorption(added: added, merged: merged, evicted: enforceLimit())
+    }
+
     private mutating func enforceLimit() -> [UUID] {
         let unpinned = history()
         guard unpinned.count > Self.unpinnedLimit else { return [] }

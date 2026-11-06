@@ -29,6 +29,16 @@ public final class ClipboardStore {
         return ClipboardHistory(items: index.items)
     }
 
+    /// Anahtarı şimdi okur; anahtar yoksa `EncryptedFileStore.Failure.keyUnavailable` fırlatır.
+    public func prepareKey() throws { try files.prepareKey() }
+
+    /// Okunamayan index'i silmeden kenara alır (`index.unreadable-<unix zamanı>`) ve yeni adını döndürür.
+    public func quarantineIndex(now: Date) throws -> String {
+        let name = "\(Self.indexName).unreadable-\(Int(now.timeIntervalSince1970))"
+        try files.rename(from: Self.indexName, to: name)
+        return name
+    }
+
     public func saveHistory(_ history: ClipboardHistory) throws {
         let data = try JSONEncoder().encode(Index(version: Self.currentVersion, items: history.items))
         try files.write(data, named: Self.indexName)

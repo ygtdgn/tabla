@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import CryptoKit
 import ImageIO
 import UniformTypeIdentifiers
 import UtilCore
@@ -14,6 +15,34 @@ func textClip(_ s: String) -> CapturedClip {
 func imageClip(_ bytes: [UInt8]) -> CapturedClip {
     CapturedClip(kind: .image, representations: [Representation(type: "public.png", data: Data(bytes))],
                  plainText: nil, dedupKey: "i:\(bytes)", imagePixelSize: CGSize(width: 40, height: 30), sourceBundleID: nil)
+}
+
+/// Gerçek PNG verili görsel kopyası (küçük resim üretilebilsin diye).
+func pngClip(width: Int, height: Int) -> CapturedClip {
+    CapturedClip(kind: .image, representations: [Representation(type: "public.png", data: makePNG(width: width, height: height))],
+                 plainText: nil, dedupKey: "i:png-\(width)x\(height)", imagePixelSize: CGSize(width: width, height: height),
+                 sourceBundleID: nil)
+}
+
+struct KeyUnavailableForTest: Error {}
+
+/// Keychain yerine: anahtar bellekte, `isAvailable` false iken her okuma hata verir.
+final class SwitchableKeyProvider: KeyProvider, @unchecked Sendable {
+    private let lock = NSLock()
+    private let key = SymmetricKey(size: .bits256)
+    private var available = true
+
+    var isAvailable: Bool {
+        get { lock.withLock { available } }
+        set { lock.withLock { available = newValue } }
+    }
+
+    func symmetricKey() throws -> SymmetricKey {
+        try lock.withLock {
+            guard available else { throw KeyUnavailableForTest() }
+            return key
+        }
+    }
 }
 
 final class FakePasteboard: PasteboardReading, PasteboardWriting {

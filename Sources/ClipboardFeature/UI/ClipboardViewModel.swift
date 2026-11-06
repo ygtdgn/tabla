@@ -20,6 +20,8 @@ public final class ClipboardViewModel {
     }
     public private(set) var rows: [ClipRow] = []
     public private(set) var selectedIndex: Int = 0
+    /// Geçmiş Keychain anahtarı olmadığı için açılamadı; listede yalnızca bellekteki kopyalar var.
+    public var isLocked = false
 
     public init(history: ClipboardHistory) {
         self.history = history

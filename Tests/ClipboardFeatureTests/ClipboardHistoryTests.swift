@@ -83,6 +83,44 @@ import CoreGraphics
         let img = ClipItem(clip: imageClip([1, 2]), id: UUID(), now: date(0))
         #expect(img.kind == .image); #expect(img.preview == ""); #expect(img.imagePixelSize == CGSize(width: 40, height: 30))
     }
+    @Test func absorbAddsMemoryItemsAndMergesDuplicates() {
+        var loaded = ClipboardHistory()
+        let old = loaded.add(textClip("eski"), now: date(0)).itemID
+        var memory = ClipboardHistory()
+        let a = memory.add(textClip("a"), now: date(10)).itemID
+        let dup = memory.add(textClip("eski"), now: date(11)).itemID
+        let p = memory.add(textClip("sabit"), now: date(12)).itemID
+        _ = memory.setPinned(p, true, now: date(13))
+        let result = loaded.absorb(memory.items)
+        #expect(result == .init(added: [a, p], merged: [dup], evicted: []))
+        #expect(loaded.history().map(\.id) == [old, a])
+        #expect(loaded.item(old)?.lastCopiedAt == date(11))
+        #expect(loaded.item(a) == memory.item(a))
+        #expect(loaded.pinned().map(\.id) == [p]); #expect(loaded.item(p)?.pinnedAt == date(13))
+    }
+    @Test func absorbCarriesAPinOntoTheMergedItem() {
+        var loaded = ClipboardHistory()
+        let old = loaded.add(textClip("eski"), now: date(0)).itemID
+        var memory = ClipboardHistory()
+        let dup = memory.add(textClip("eski"), now: date(10)).itemID
+        _ = memory.setPinned(dup, true, now: date(11))
+        #expect(loaded.absorb(memory.items) == .init(added: [], merged: [dup], evicted: []))
+        #expect(loaded.pinned().map(\.id) == [old]); #expect(loaded.item(old)?.pinnedAt == date(11))
+    }
+    @Test func absorbEvictsTheOldestLoadedItemsOnceAtTheEnd() {
+        var loaded = ClipboardHistory()
+        var ids: [UUID] = []
+        for i in 0..<500 { ids.append(loaded.add(textClip("\(i)"), now: date(i)).itemID) }
+        var memory = ClipboardHistory()
+        let m1 = memory.add(textClip("yeni1"), now: date(1000)).itemID
+        let m2 = memory.add(textClip("yeni2"), now: date(1001)).itemID
+        let pinned = memory.add(textClip("sabit"), now: date(1002)).itemID
+        _ = memory.setPinned(pinned, true, now: date(1003))
+        let result = loaded.absorb(memory.items)
+        #expect(result.added == [m1, m2, pinned])
+        #expect(result.evicted == [ids[0], ids[1]])
+        #expect(loaded.history().count == 500); #expect(loaded.history().first?.id == m2)
+    }
     @Test func previewScansOnlyABoundedPrefix() {
         // Büyük kopyalarda önizleme tüm metni bölmez; yalnızca ilk `previewScanLimit` karaktere bakar.
         let late = String(repeating: "\n", count: ClipItem.previewScanLimit) + "geç satır"

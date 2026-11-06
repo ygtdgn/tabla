@@ -11,8 +11,10 @@ enum ClipRowFormat {
 
     static func shortcutHint(_ number: Int) -> String { "⌘\(number)" }
 
-    static func emptyMessage(query: String) -> String {
-        query.isEmpty ? "Henüz kopyalanan bir şey yok" : "Sonuç bulunamadı"
+    /// Kilitliyken (Keychain anahtarı alınamadı) arama yapılsa da kilit açıklaması gösterilir.
+    static func emptyMessage(query: String, isLocked: Bool) -> String {
+        if isLocked { return "Geçmiş şu an açılamıyor. Anahtar Zinciri erişimine izin verip tekrar dene." }
+        return query.isEmpty ? "Henüz kopyalanan bir şey yok" : "Sonuç bulunamadı"
     }
 }
 
@@ -45,8 +47,10 @@ struct ClipboardView: View {
             Divider()
 
             if model.rows.isEmpty {
-                Text(ClipRowFormat.emptyMessage(query: model.query))
+                Text(ClipRowFormat.emptyMessage(query: model.query, isLocked: model.isLocked))
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 list

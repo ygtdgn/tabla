@@ -54,6 +54,15 @@ import UtilCore
         try files.write(Data("not json".utf8), named: "index")
         #expect(throws: DecodingError.self) { try store.loadHistory() }
     }
+    @Test func quarantineIndexRenamesItWithTheUnixTime() throws {
+        let (store, files, _) = try make()
+        try files.write(Data("not json".utf8), named: "index")
+        let name = try store.quarantineIndex(now: Date(timeIntervalSince1970: 1_700_000_000.9))
+        #expect(name == "index.unreadable-1700000000")
+        #expect(try files.allNames() == ["index.unreadable-1700000000"])
+        #expect(try files.read(named: name) == Data("not json".utf8))
+        #expect(try store.loadHistory() == ClipboardHistory())
+    }
     @Test func corruptBlobThrows() throws {
         let (store, files, _) = try make()
         let id = UUID()
