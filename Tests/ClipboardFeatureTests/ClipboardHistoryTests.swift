@@ -29,6 +29,19 @@ import CoreGraphics
         #expect(h.items.count == 501)
         #expect(h.pinned().map(\.id) == [p])
     }
+    @Test func unpinningWhenFullKeepsItemOnTopAndEvictsTheOldest() {
+        var h = ClipboardHistory()
+        let p = h.add(textClip("iban"), now: date(0)).itemID
+        _ = h.setPinned(p, true, now: date(1))
+        var ids: [UUID] = []
+        for i in 1...500 { ids.append(h.add(textClip("\(i)"), now: date(1 + i)).itemID) }
+        let evicted = h.setPinned(p, false, now: date(1000))
+        #expect(evicted == [ids[0]])
+        #expect(h.item(p)?.lastCopiedAt == date(1000))
+        #expect(h.history().first?.id == p)
+        #expect(h.history().count == 500)
+        #expect(h.pinned().isEmpty)
+    }
     @Test func visibleShowsPinnedNewestPinFirstThenHistory() {
         var h = ClipboardHistory()
         let a = h.add(textClip("a"), now: date(0)).itemID

@@ -30,10 +30,16 @@ public struct ClipboardHistory: Equatable, Sendable {
         items[i].lastCopiedAt = now
     }
 
+    /// Sabitlemesi kaldırılan öğe geçmişin en üstüne döner; limit aşılırsa gerçekten en eski öğeler silinir.
     public mutating func setPinned(_ id: UUID, _ pinned: Bool, now: Date) -> [UUID] {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return [] }
-        items[i].pinnedAt = pinned ? now : nil
-        return pinned ? [] : enforceLimit()
+        guard !pinned else {
+            items[i].pinnedAt = now
+            return []
+        }
+        items[i].pinnedAt = nil
+        items[i].lastCopiedAt = now
+        return enforceLimit()
     }
 
     public mutating func delete(_ id: UUID) { items.removeAll { $0.id == id } }
