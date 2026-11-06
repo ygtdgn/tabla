@@ -10,6 +10,8 @@ private let log = Logger(subsystem: "com.yumoteknoloji.util", category: "switche
 /// Fully off without Accessibility; Screen Recording only turns preview capture on.
 @MainActor
 public final class SwitcherFeature: Feature {
+    static let tapRetryInterval: TimeInterval = 1
+
     private var machine = SwitcherStateMachine()
     private let enumerator = WindowEnumerator()
     private var mru = MRUTracker()
@@ -20,6 +22,8 @@ public final class SwitcherFeature: Feature {
     /// Bumped at every session start, so a late show timer or schedule of an older session is ignored.
     private var session = 0
     private var showTimer: Timer?
+    /// Runs while Accessibility is granted but the event tap could not be created yet.
+    private var tapRetryTimer: Timer?
     private var capturesThumbnails = false
 
     private let cache: ThumbnailCache
@@ -49,7 +53,7 @@ public final class SwitcherFeature: Feature {
         }
         focusObserver.start()
         if !isMRUSeeded { takeSnapshot() }
-        if !tap.start() { log.error("Option+Tab event tap'i oluşturulamadı") }
+        startTap()
     }
 
     public func shutdown() {
@@ -57,6 +61,33 @@ public final class SwitcherFeature: Feature {
     }
 
     // MARK: Event tap
+
+    /// The tap can fail right after Accessibility is granted; it is then retried every second until it
+    /// starts or Accessibility is revoked (`stopSwitching`).
+    private func startTap() {
+        guard !tap.start() else {
+            stopTapRetry()
+            return
+        }
+        guard tapRetryTimer == nil else { return }
+        log.error("Option+Tab event tap'i oluşturulamadı; her saniye yeniden denenecek")
+        let timer = Timer(timeInterval: Self.tapRetryInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.retryTap() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        tapRetryTimer = timer
+    }
+
+    private func retryTap() {
+        guard tap.start() else { return }
+        log.notice("Option+Tab event tap'i yeniden denemede oluşturuldu")
+        stopTapRetry()
+    }
+
+    private func stopTapRetry() {
+        tapRetryTimer?.invalidate()
+        tapRetryTimer = nil
+    }
 
     /// Runs inside the event tap callback: decides swallow/pass synchronously and defers every effect.
     /// The only synchronous work is the snapshot on the Tab that starts a session.
@@ -180,6 +211,7 @@ public final class SwitcherFeature: Feature {
 
     /// Without Accessibility nothing runs: no tap, no focus observer, no open session.
     private func stopSwitching() {
+        stopTapRetry()
         tap.stop()
         focusObserver.stop()
         machine = SwitcherStateMachine()
