@@ -18,6 +18,7 @@ final class PermissionsWindowController {
     }()
 
     private var closeObserver: NSObjectProtocol?
+    private var hostingView: NSHostingView<PermissionsView>?
 
     init() {
         closeObserver = NotificationCenter.default.addObserver(
@@ -28,13 +29,16 @@ final class PermissionsWindowController {
                 guard let self, let closing, closing === self.window else { return }
                 // Görünümü söker; 1 sn'lik yenileme zamanlayıcısı pencere kapanınca durur.
                 self.window.contentView = nil
+                self.hostingView = nil
             }
         }
     }
 
     func show() {
-        if window.contentView == nil {
-            window.contentView = NSHostingView(rootView: PermissionsView())
+        if hostingView == nil {
+            let view = NSHostingView(rootView: PermissionsView())
+            hostingView = view
+            window.contentView = view
         }
         // Her açılışta imlecin bulunduğu ekranın ortasına konur; boyut, içerik yerleşince okunur.
         window.layoutIfNeeded()
